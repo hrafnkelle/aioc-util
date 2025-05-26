@@ -32,6 +32,8 @@ sudo udevadm trigger
 
 After this, you can run `aioc-util.py` without sudo.
 
+The [libusb/hidapi](https://github.com/libusb/hidapi) project also has a udev rule that could be used.
+
 ## Windows
 
 On Windows, you need to provide the `hidapi.dll` library. Download the Windows release build of the [hidapi](https://github.com/libusb/hidapi) project (from the Releases page), locate `hidapi.dll`, and copy it into this project's root directory (alongside `aioc-util.py`).
