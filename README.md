@@ -1,7 +1,7 @@
 # aioc-util
 
 `aioc-util.py` is a command-line tool for configuring the [AIOC](https://github.com/skuep/AIOC)
-device, including viewing its internal registers and change them, including setting the PTT source.
+device, viewing its internal registers and change them, including setting the PTT source.
 
 ## Requirements
 
@@ -27,8 +27,9 @@ the file to `/etc/udev/rules.d/`, then reload rules and replug the device:
 sudo cp udev/rules.d/91-aioc.conf /etc/udev/rules.d/
 sudo udevadm control --reload
 sudo udevadm trigger
-# Unplug and replug your AIOC USB device
 ```
+
+Unplug and replug your AIOC USB device after installing the rule.
 
 After this, you can run `aioc-util.py` without sudo.
 
