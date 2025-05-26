@@ -21,7 +21,11 @@ if os.name == "nt":
         print("Could not load hidapi.dll:", e)
         sys.exit(1)
 
+
 import hid
+
+AIOC_VID = 0x1209
+AIOC_PID = 0x7388
 
 
 class Register(IntEnum):
@@ -214,8 +218,15 @@ def main():
     if args.open_usb:
         vid_open, pid_open = args.open_usb
     else:
-        vid_open, pid_open = 0x1209, 0x7388
-    aioc = hid.Device(vid=vid_open, pid=pid_open)
+        vid_open, pid_open = AIOC_VID, AIOC_PID
+    try:
+        aioc = hid.Device(vid=vid_open, pid=pid_open)
+    except (OSError, hid.HIDException) as e:
+        print(
+            f"Could not open AIOC device (VID: {vid_open:#06x}, PID: {pid_open:#06x}):",
+            e,
+        )
+        sys.exit(1)
 
     magic = Struct("<L").pack(read(aioc, Register.MAGIC))
     if magic != b"AIOC":
