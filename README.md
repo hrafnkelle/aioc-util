@@ -47,3 +47,20 @@ On Windows, you need to provide the `hidapi.dll` library. Download the Windows r
 ```bash
 ./aioc-util.py --vptt-lvlctrl 0x80 --vptt-timctrl 10 --vcos-lvlctrl 0xff --vcos-timctrl 20 --store
 ```
+
+## Example: Opening with custom USB VID/PID
+
+```bash
+./aioc-util.py --set-usb 0x1234 0x5678 --dump
+```
+
+### Finding the VID/PID
+
+If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device, you can use the following commands:
+
+- **Linux**: use `lsusb` to list USB devices and look for your device’s VID:PID pair.
+- **Windows (PowerShell)**:
+
+  ```powershell
+  Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like "USB\\VID*" } | Select-Object Name, InstanceId
+  ```

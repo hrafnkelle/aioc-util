@@ -142,11 +142,18 @@ def parse_args():
         help="List all possible PTT sources",
     )
     parser.add_argument(
-        "--usb",
+        "--set-usb",
         nargs=2,
         metavar=("VID", "PID"),
         type=lambda x: int(x, 0),
         help="Set USB VID and PID (hex or decimal)",
+    )
+    parser.add_argument(
+        "--open-usb",
+        nargs=2,
+        metavar=("VID", "PID"),
+        type=lambda x: int(x, 0),
+        help="USB VID and PID to use when opening the device (hex or decimal)",
     )
     parser.add_argument(
         "--vol-up", metavar="SOURCE", help="Set Volume Up button source"
@@ -202,7 +209,11 @@ def main():
             print(f"{src.name} (0x{src.value:08x})")
         sys.exit(0)
 
-    aioc = hid.Device(vid=0x1209, pid=0x7388)
+    if args.open_usb:
+        vid_open, pid_open = args.open_usb
+    else:
+        vid_open, pid_open = 0x1209, 0x7388
+    aioc = hid.Device(vid=vid_open, pid=pid_open)
 
     magic = Struct("<L").pack(read(aioc, Register.MAGIC))
     if magic != b"AIOC":
@@ -264,8 +275,8 @@ def main():
         print(f"Now PTT1 Source: {PTTSource(read(aioc, Register.AIOC_IOMUX0))}")
         print(f"Now PTT2 Source: {PTTSource(read(aioc, Register.AIOC_IOMUX1))}")
 
-    if args.usb:
-        vid, pid = args.usb
+    if args.set_usb:
+        vid, pid = args.set_usb
         value = (pid << 16) | (vid << 0)
         write(aioc, Register.USBID, value)
         print(f"Now USBID: {read(aioc, Register.USBID):08x}")
