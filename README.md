@@ -41,3 +41,9 @@ On Windows, you need to provide the `hidapi.dll` library. Download the Windows r
 ```bash
 ./aioc-util.py --help
 ```
+
+## Example: Setting VPTT/VCOS control registers
+
+```bash
+./aioc-util.py --vptt-lvlctrl 0x80 --vptt-timctrl 10 --vcos-lvlctrl 0xff --vcos-timctrl 20 --store
+```

@@ -155,6 +155,30 @@ def parse_args():
         "--vol-dn", metavar="SOURCE", help="Set Volume Down button source"
     )
     parser.add_argument(
+        "--vptt-lvlctrl",
+        metavar="VALUE",
+        type=lambda x: int(x, 0),
+        help="Set VPTT_LVLCTRL register (hex or decimal)",
+    )
+    parser.add_argument(
+        "--vptt-timctrl",
+        metavar="VALUE",
+        type=lambda x: int(x, 0),
+        help="Set VPTT_TIMCTRL register (hex or decimal)",
+    )
+    parser.add_argument(
+        "--vcos-lvlctrl",
+        metavar="VALUE",
+        type=lambda x: int(x, 0),
+        help="Set VCOS_LVLCTRL register (hex or decimal)",
+    )
+    parser.add_argument(
+        "--vcos-timctrl",
+        metavar="VALUE",
+        type=lambda x: int(x, 0),
+        help="Set VCOS_TIMCTRL register (hex or decimal)",
+    )
+    parser.add_argument(
         "--store", action="store_true", help="Store settings into flash"
     )
     return parser.parse_args()
@@ -261,6 +285,26 @@ def main():
         print(
             f"Now VolDN button source: {CM108ButtonSource(read(aioc, Register.CM108_IOMUX1))}"
         )
+
+    if args.vptt_lvlctrl is not None:
+        print(f"Setting VPTT_LVLCTRL to {args.vptt_lvlctrl:#x}")
+        write(aioc, Register.VPTT_LVLCTRL, args.vptt_lvlctrl)
+        print(f"Now VPTT_LVLCTRL: {read(aioc, Register.VPTT_LVLCTRL):08x}")
+
+    if args.vptt_timctrl is not None:
+        print(f"Setting VPTT_TIMCTRL to {args.vptt_timctrl:#x}")
+        write(aioc, Register.VPTT_TIMCTRL, args.vptt_timctrl)
+        print(f"Now VPTT_TIMCTRL: {read(aioc, Register.VPTT_TIMCTRL):08x}")
+
+    if args.vcos_lvlctrl is not None:
+        print(f"Setting VCOS_LVLCTRL to {args.vcos_lvlctrl:#x}")
+        write(aioc, Register.VCOS_LVLCTRL, args.vcos_lvlctrl)
+        print(f"Now VCOS_LVLCTRL: {read(aioc, Register.VCOS_LVLCTRL):08x}")
+
+    if args.vcos_timctrl is not None:
+        print(f"Setting VCOS_TIMCTRL to {args.vcos_timctrl:#x}")
+        write(aioc, Register.VCOS_TIMCTRL, args.vcos_timctrl)
+        print(f"Now VCOS_TIMCTRL: {read(aioc, Register.VCOS_TIMCTRL):08x}")
 
     if args.store:
         print("Storing...")
