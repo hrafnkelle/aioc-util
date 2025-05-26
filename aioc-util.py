@@ -120,7 +120,7 @@ def dump(device):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="AIOS utility for configuring AIOC hardware settings.",
+        description="Utility for viewining configuring AIOC hardware settings.",
         epilog="Example: aioc-util.py --ptt1 VPTT --store",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
