@@ -3,6 +3,8 @@
 `aioc-util.py` is a command-line tool for configuring the [AIOC](https://github.com/skuep/AIOC)
 device, viewing its internal registers and change them, including setting the PTT source.
 
+This utility is written by Hrafnkell Eiríksson TF3HR based on code from [G1LRO](https://g1lro.uk/?p=676) and from [Simon Küppers/skuep](https://github.com/skuep/AIOC/pull/93#issuecomment-2571321845).
+
 ## Requirements
 
 - Python 3
@@ -17,6 +19,13 @@ python3 -m venv venv
 source venv/bin/activate
 pip install hid
 ```
+
+If needed install libhidapi-hidraw0 and libhidapi-libusb
+```bash
+sudo apt install libhidapi-hidraw0 libhidapi-libusb
+```
+
+A virtual environment is reccomended since the distribution provided HID python module seems to be an older version (at least on Debian/Raspian OS). That way the hid module can be pip installed without affecting the whole system. If you have installed python3-hid or python3-hidapi with apt you may need to uninstall that.<>
 
 ## Udev rule (Linux)
 
@@ -67,3 +76,35 @@ If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device
   ```powershell
   Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like "USB\\VID*" } | Select-Object Name, InstanceId
   ```
+
+## Application examples
+
+You may need to set the AIOC register values to defaults before using the suggestions below.
+
+```bash
+./aioc-util.py --defaults 
+```
+
+
+### APRSDroid
+
+To use with APRSDroid the virtual PTT should be enabled on the AIOC. This way you don't have to rely on the VOX function of your radio to key the radio for transmission.
+
+```bash
+./aioc-util.py --ptt1 VPTT --store
+```
+
+### AllStarLink3
+
+Make sure you have a udev rule to allow access to the HID functionality of the AIOC like described above. Set the VCOS_TIMCTRL register to 1500
+
+```bash
+./aioc-util.py --vcos-tmctrl 1500 --store
+```
+
+ASL3 supports the AIOC on its default USB VID PID values. You can edit the file `/etc/asterisk/res_usbradio.conf` and 
+uncomment the line with the AIOC USB VID and PID values. This way you don't have to change the VID and PID so it looks like a CM108 interface. If you would rather change the VID and PID values then you can do that with
+```bash
+./aioc-util.py --set-usb 0x0d8c 0x000c --store
+```
+
