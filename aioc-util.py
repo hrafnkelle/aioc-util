@@ -1,7 +1,23 @@
 import argparse
+import os
 import sys
 from enum import IntEnum, IntFlag
 from struct import Struct
+
+# On Windows, ensure hidapi.dll is available
+if os.name == "nt":
+    import ctypes
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    dll_path = os.path.join(script_dir, "hidapi.dll")
+    try:
+        if os.path.exists(dll_path):
+            ctypes.WinDLL(dll_path)
+        else:
+            ctypes.WinDLL("hidapi.dll")
+    except OSError as e:
+        print("Could not load hidapi.dll:", e)
+        sys.exit(1)
 
 import hid
 
@@ -98,7 +114,9 @@ def dump(device):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="AIOS utility for configuring AIOC/CM108 sources"
+        description="AIOS utility for configuring AIOC hardware settings.",
+        epilog="Example: aioc-util.py --ptt1 VPTT --store",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--defaults", action="store_true", help="Load hardware defaults"
