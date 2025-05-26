@@ -3,12 +3,17 @@
 `aioc-util.py` is a command-line tool for configuring the [AIOC](https://github.com/skuep/AIOC)
 device, viewing its internal registers and change them, including setting the PTT source.
 
+
 This utility is written by Hrafnkell Eiríksson TF3HR based on code from [G1LRO](https://g1lro.uk/?p=676) and from [Simon Küppers/skuep](https://github.com/skuep/AIOC/pull/93#issuecomment-2571321845).
+
+The code is only tested against AIOC firmware v1.3. Firmware v1.2 does not seem to work. Please [upgrade your AIOC](https://github.com/skuep/AIOC#how-to-program) if needed.
+
 
 ## Requirements
 
 - Python 3
 - [hid](https://pypi.org/project/hid/) Python package to access the USB HID interface
+- A hid shared library for your platform, see below.
 
 ## Installation
 
@@ -17,18 +22,16 @@ Clone this repository (or [download it zipped](https://github.com/hrafnkelle/aio
 git clone https://github.com/hrafnkelle/aioc-util.git
 ```
 
-Create and activate a virtual environment in the cloned repository, then install dependencies:
+Create and activate a virtual environment in the cloned repository, then install dependencies.
+A virtual environment is reccomended since the distribution provided HID python module seems to be an older version (at least on Debian/Raspian OS). That way the hid module can be pip installed without affecting the whole system. If you have installed python3-hid or python3-hidapi with apt you may need to uninstall that.<>
 
+### Linux
 ```bash
 cd aioc-util
 python3 -m venv venv
 source venv/bin/activate
 pip install hid
 ```
-
-A virtual environment is reccomended since the distribution provided HID python module seems to be an older version (at least on Debian/Raspian OS). That way the hid module can be pip installed without affecting the whole system. If you have installed python3-hid or python3-hidapi with apt you may need to uninstall that.<>
-
-## Linux
 
 A udev rule is provided to allow non-root access to the AIOC device. Install it by copying
 the file to `/etc/udev/rules.d/`, then reload rules and replug the device:
@@ -50,7 +53,14 @@ If needed, install libhidapi-hidraw0 and libhidapi-libusb
 sudo apt install libhidapi-hidraw0 libhidapi-libusb
 ```
 
-## Windows
+### Windows
+
+```powershell
+cd aioc-util
+python3 -m venv venv
+.\venv\Scripts\activate
+pip install hid
+```
 
 On Windows, you need to provide the `hidapi.dll` library. Download the Windows release build of the [hidapi](https://github.com/libusb/hidapi) project (from the Releases page), locate `hidapi.dll`, and copy it into this project's root directory (alongside `aioc-util.py`).
 
@@ -73,6 +83,12 @@ List the available command line arguments
 ./aioc-util.py --open-usb 0x1234 0x5678 --dump
 ```
 
+On Windows you may need to put python in front of the script name
+```powershell
+python aioc-util.py --dump
+```
+
+
 ### Finding the VID/PID
 
 If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device, you can use the following commands:
@@ -81,7 +97,7 @@ If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device
 - **Windows (PowerShell)**:
 
   ```powershell
-  Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like "USB\\VID*" } | Select-Object Name, InstanceId
+  Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like "USB\VID*" } | Select-Object Name, InstanceId
   ```
 
 ## Application examples
