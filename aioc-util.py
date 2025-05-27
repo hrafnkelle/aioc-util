@@ -28,6 +28,17 @@ AIOC_VID = 0x1209
 AIOC_PID = 0x7388
 
 
+class StrIntFlag(IntFlag):
+    def __str__(self):
+        name = self.name
+        if name is not None:
+            return name
+        parts = [m.name for m in type(self) if m.value and (m in self)]
+        if parts:
+            return "|".join(parts)
+        return hex(self.value)
+
+
 class Register(IntEnum):
     MAGIC = 0x00
     USBID = 0x08
@@ -56,7 +67,7 @@ class Command(IntFlag):
     STORE = 0x80
 
 
-class PTTSource(IntFlag):
+class PTTSource(StrIntFlag):
     NONE = 0x00000000
     CM108GPIO1 = 0x00000001
     CM108GPIO2 = 0x00000002
@@ -68,30 +79,12 @@ class PTTSource(IntFlag):
     SERIALNDTRRTS = 0x00000800
     VPTT = 0x00001000
 
-    def __str__(self):
-        name = self.name
-        if name is not None:
-            return name
-        parts = [m.name for m in type(self) if m.value and (m in self)]
-        if parts:
-            return "|".join(parts)
-        return hex(self.value)
 
-
-class CM108ButtonSource(IntFlag):
+class CM108ButtonSource(StrIntFlag):
     NONE = 0x00000000
     IN1 = 0x00010000
     IN2 = 0x00020000
     VCOS = 0x01000000
-
-    def __str__(self):
-        name = self.name
-        if name is not None:
-            return name
-        parts = [m.name for m in type(self) if m.value and (m in self)]
-        if parts:
-            return "|".join(parts)
-        return hex(self.value)
 
 
 def read(device, address):
