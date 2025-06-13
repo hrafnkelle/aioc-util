@@ -79,6 +79,10 @@ class PTTSource(StrIntFlag):
     SERIALNDTRRTS = 0x00000800
     VPTT = 0x00001000
 
+class PTTChannel(IntEnum):
+    PTT1 = 3
+    PTT2 = 4
+
 
 class CM108ButtonSource(StrIntFlag):
     NONE = 0x00000000
@@ -96,10 +100,9 @@ def read(device, address):
     return value
 
 
-def write(device, address, value):
+def write_feat_report(device, address, value):
     data = Struct("<BBBL").pack(0, Command.WRITESTROBE, address, value)
     device.send_feature_report(data)
-
 
 def cmd(device, cmd):
     data = Struct("<BBBL").pack(0, cmd, 0x00, 0x00000000)
@@ -187,6 +190,18 @@ def parse_args():
     parser.add_argument(
         "--store", action="store_true", help="Store settings into flash"
     )
+    parser.add_argument(
+        "--set-ptt1-state",
+        metavar="STATE",
+        choices=["on", "off"],
+        help="Set PTT1 state via raw HID write: 'on' or 'off'",
+    )
+    parser.add_argument(
+        "--set-ptt2-state",
+        metavar="STATE",
+        choices=["on", "off"],
+        help="Set PTT2 state via raw HID write: 'on' or 'off'",
+    )
     return parser.parse_args()
 
 
@@ -198,6 +213,14 @@ def parse_ptt_source(val):
 def parse_btn_source(val):
     parts = val.split("|")
     return sum(CM108ButtonSource[p] for p in parts)
+
+
+def set_ptt_state_raw(device, pin_num, state_on):
+    state = 1 if state_on else 0
+    iomask = 1 << (pin_num - 1)
+    iodata = state << (pin_num - 1)
+    data = Struct("<BBBBB").pack(0, 0, iodata, iomask, 0)
+    device.write(bytes(data))
 
 
 def main():
@@ -257,15 +280,15 @@ def main():
     if args.swap_ptt:
         p1, p2 = ptt2_source, ptt1_source
         print(f"Setting PTT1 Source to {p1}")
-        write(aioc, Register.AIOC_IOMUX0, p1)
+        write_feat_report(aioc, Register.AIOC_IOMUX0, p1)
         print(f"Setting PTT2 Source to {p2}")
-        write(aioc, Register.AIOC_IOMUX1, p2)
+        write_feat_report(aioc, Register.AIOC_IOMUX1, p2)
         print(f"Now PTT1 Source: {PTTSource(read(aioc, Register.AIOC_IOMUX0))}")
         print(f"Now PTT2 Source: {PTTSource(read(aioc, Register.AIOC_IOMUX1))}")
 
     if args.auto_ptt1:
         print(f"Setting PTT1 Source to {PTTSource.VPTT}")
-        write(aioc, Register.AIOC_IOMUX0, PTTSource.VPTT)
+        write_feat_report(aioc, Register.AIOC_IOMUX0, PTTSource.VPTT)
         print(f"Now PTT1 Source: {PTTSource(read(aioc, Register.AIOC_IOMUX0))}")
         print(f"Now PTT2 Source: {PTTSource(read(aioc, Register.AIOC_IOMUX1))}")
 
@@ -273,29 +296,29 @@ def main():
         if args.ptt1:
             val1 = parse_ptt_source(args.ptt1)
             print(f"Setting PTT1 Source to {PTTSource(val1)}")
-            write(aioc, Register.AIOC_IOMUX0, PTTSource(val1))
+            write_feat_report(aioc, Register.AIOC_IOMUX0, PTTSource(val1))
         if args.ptt2:
             val2 = parse_ptt_source(args.ptt2)
             print(f"Setting PTT2 Source to {PTTSource(val2)}")
-            write(aioc, Register.AIOC_IOMUX1, PTTSource(val2))
+            write_feat_report(aioc, Register.AIOC_IOMUX1, PTTSource(val2))
         print(f"Now PTT1 Source: {PTTSource(read(aioc, Register.AIOC_IOMUX0))}")
         print(f"Now PTT2 Source: {PTTSource(read(aioc, Register.AIOC_IOMUX1))}")
 
     if args.set_usb:
         vid, pid = args.set_usb
         value = (pid << 16) | (vid << 0)
-        write(aioc, Register.USBID, value)
+        write_feat_report(aioc, Register.USBID, value)
         print(f"Now USBID: {read(aioc, Register.USBID):08x}")
 
     if args.vol_up or args.vol_dn:
         if args.vol_up:
             su = parse_btn_source(args.vol_up)
             print(f"Setting VolUP button source to {CM108ButtonSource(su)}")
-            write(aioc, Register.CM108_IOMUX0, CM108ButtonSource(su))
+            write_feat_report(aioc, Register.CM108_IOMUX0, CM108ButtonSource(su))
         if args.vol_dn:
             sd = parse_btn_source(args.vol_dn)
             print(f"Setting VolDN button source to {CM108ButtonSource(sd)}")
-            write(aioc, Register.CM108_IOMUX1, CM108ButtonSource(sd))
+            write_feat_report(aioc, Register.CM108_IOMUX1, CM108ButtonSource(sd))
         print(
             f"Now VolUP button source: {CM108ButtonSource(read(aioc, Register.CM108_IOMUX0))}"
         )
@@ -305,27 +328,33 @@ def main():
 
     if args.vptt_lvlctrl is not None:
         print(f"Setting VPTT_LVLCTRL to {args.vptt_lvlctrl:#x}")
-        write(aioc, Register.VPTT_LVLCTRL, args.vptt_lvlctrl)
+        write_feat_report(aioc, Register.VPTT_LVLCTRL, args.vptt_lvlctrl)
         print(f"Now VPTT_LVLCTRL: {read(aioc, Register.VPTT_LVLCTRL):08x}")
 
     if args.vptt_timctrl is not None:
         print(f"Setting VPTT_TIMCTRL to {args.vptt_timctrl:#x}")
-        write(aioc, Register.VPTT_TIMCTRL, args.vptt_timctrl)
+        write_feat_report(aioc, Register.VPTT_TIMCTRL, args.vptt_timctrl)
         print(f"Now VPTT_TIMCTRL: {read(aioc, Register.VPTT_TIMCTRL):08x}")
 
     if args.vcos_lvlctrl is not None:
         print(f"Setting VCOS_LVLCTRL to {args.vcos_lvlctrl:#x}")
-        write(aioc, Register.VCOS_LVLCTRL, args.vcos_lvlctrl)
+        write_feat_report(aioc, Register.VCOS_LVLCTRL, args.vcos_lvlctrl)
         print(f"Now VCOS_LVLCTRL: {read(aioc, Register.VCOS_LVLCTRL):08x}")
 
     if args.vcos_timctrl is not None:
         print(f"Setting VCOS_TIMCTRL to {args.vcos_timctrl:#x}")
-        write(aioc, Register.VCOS_TIMCTRL, args.vcos_timctrl)
+        write_feat_report(aioc, Register.VCOS_TIMCTRL, args.vcos_timctrl)
         print(f"Now VCOS_TIMCTRL: {read(aioc, Register.VCOS_TIMCTRL):08x}")
 
     if args.store:
         print("Storing...")
         cmd(aioc, Command.STORE)
+
+    if args.set_ptt1_state:
+        set_ptt_state_raw(aioc, PTTChannel.PTT1, args.set_ptt1_state == "on")
+
+    if args.set_ptt2_state:
+        set_ptt_state_raw(aioc, PTTChannel.PTT2, args.set_ptt2_state == "on")
 
 
 if __name__ == "__main__":
