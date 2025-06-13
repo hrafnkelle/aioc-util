@@ -37,7 +37,7 @@ A udev rule is provided to allow non-root access to the AIOC device. Install it 
 the file to `/etc/udev/rules.d/`, then reload rules and replug the device:
 
 ```bash
-sudo cp udev/rules.d/91-aioc.conf /etc/udev/rules.d/
+sudo cp udev/rules.d/91-aioc.rules /etc/udev/rules.d/
 sudo udevadm control --reload
 sudo udevadm trigger
 ```
