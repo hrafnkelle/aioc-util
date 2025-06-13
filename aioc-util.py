@@ -202,7 +202,11 @@ def parse_args():
         choices=["on", "off"],
         help="Set PTT2 state via raw HID write: 'on' or 'off'",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    return args
 
 
 def parse_ptt_source(val):
@@ -249,33 +253,34 @@ def main():
         print(f"Unexpected magic: {magic}")
         sys.exit(-1)
 
-    print(f"Manufacturer: {aioc.manufacturer}")
-    print(f"Product: {aioc.product}")
-    print(f"Serial No: {aioc.serial}")
-    print(f"Magic: {magic}")
-
     if args.defaults:
         print("Loading Defaults...")
         cmd(aioc, Command.DEFAULTS)
 
     if args.dump:
+        print(f"Manufacturer: {aioc.manufacturer}")
+        print(f"Product: {aioc.product}")
+        print(f"Serial No: {aioc.serial}")
+        print(f"Magic: {magic}")
+
+        ptt1_source = PTTSource(read(aioc, Register.AIOC_IOMUX0))
+        ptt2_source = PTTSource(read(aioc, Register.AIOC_IOMUX1))
+
+        print(f"Current PTT1 Source: {ptt1_source}")
+        print(f"Current PTT2 Source: {ptt2_source}")
+
+        btn1_source = CM108ButtonSource(read(aioc, Register.CM108_IOMUX0))
+        btn2_source = CM108ButtonSource(read(aioc, Register.CM108_IOMUX1))
+        btn3_source = CM108ButtonSource(read(aioc, Register.CM108_IOMUX2))
+        btn4_source = CM108ButtonSource(read(aioc, Register.CM108_IOMUX3))
+
+        print(f"Current CM108 Button 1 (VolUP) Source: {btn1_source}")
+        print(f"Current CM108 Button 2 (VolDN) Source: {btn2_source}")
+        print(f"Current CM108 Button 3 (PlbMute) Source: {btn3_source}")
+        print(f"Current CM108 Button 4 (RecMute) Source: {btn4_source}")
+
         dump(aioc)
 
-    ptt1_source = PTTSource(read(aioc, Register.AIOC_IOMUX0))
-    ptt2_source = PTTSource(read(aioc, Register.AIOC_IOMUX1))
-
-    print(f"Current PTT1 Source: {ptt1_source}")
-    print(f"Current PTT2 Source: {ptt2_source}")
-
-    btn1_source = CM108ButtonSource(read(aioc, Register.CM108_IOMUX0))
-    btn2_source = CM108ButtonSource(read(aioc, Register.CM108_IOMUX1))
-    btn3_source = CM108ButtonSource(read(aioc, Register.CM108_IOMUX2))
-    btn4_source = CM108ButtonSource(read(aioc, Register.CM108_IOMUX3))
-
-    print(f"Current CM108 Button 1 (VolUP) Source: {btn1_source}")
-    print(f"Current CM108 Button 2 (VolDN) Source: {btn2_source}")
-    print(f"Current CM108 Button 3 (PlbMute) Source: {btn3_source}")
-    print(f"Current CM108 Button 4 (RecMute) Source: {btn4_source}")
 
     if args.swap_ptt:
         p1, p2 = ptt2_source, ptt1_source

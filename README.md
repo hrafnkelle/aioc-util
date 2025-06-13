@@ -105,7 +105,12 @@ If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device
 You may need to set the AIOC register values to defaults before using the suggestions below.
 
 ```bash
-./aioc-util.py --defaults 
+./aioc-util.py --defaults --store
+```
+
+To key a radio set ptt1 state to on, to unkey use off 
+```bash
+./aioc-util.py --set-ptt1-state on
 ```
 
 
