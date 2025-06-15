@@ -77,6 +77,13 @@ List the available command line arguments
 ./aioc-util.py --vptt-lvlctrl 0x80 --vptt-timctrl 10 --vcos-lvlctrl 0xff --vcos-timctrl 20 --store
 ```
 
+### Example: Key radio
+
+To key a radio set ptt1 state to on, to unkey use off 
+```bash
+./aioc-util.py --set-ptt1-state on
+```
+
 ### Example: Accessing an AIOC with custom USB VID/PID
 
 ```bash
@@ -107,12 +114,6 @@ You may need to set the AIOC register values to defaults before using the sugges
 ```bash
 ./aioc-util.py --defaults --store
 ```
-
-To key a radio set ptt1 state to on, to unkey use off 
-```bash
-./aioc-util.py --set-ptt1-state on
-```
-
 
 ### APRSDroid
 
