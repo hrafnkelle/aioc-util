@@ -202,6 +202,17 @@ def parse_args():
         choices=["on", "off"],
         help="Set PTT2 state via raw HID write: 'on' or 'off'",
     )
+    parser.add_argument(
+        "--enable-hwcos",
+        action="store_true",
+        help="Enable hardware COS (needs an AIOC that supports it)",
+    )
+    parser.add_argument(
+        "--enable-vcos",
+        action="store_true",
+        help="Enable virtual COS (default behavior)",
+    )
+
     args = parser.parse_args()
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
@@ -350,6 +361,20 @@ def main():
         print(f"Setting VCOS_TIMCTRL to {args.vcos_timctrl:#x}")
         write_feat_report(aioc, Register.VCOS_TIMCTRL, args.vcos_timctrl)
         print(f"Now VCOS_TIMCTRL: {read(aioc, Register.VCOS_TIMCTRL):08x}")
+
+    if args.enable_hwcos:
+        print("Enabling hardware COS (if your aioc supports it)...")
+        write_feat_report(aioc, Register.CM108_IOMUX0, CM108ButtonSource.NONE)
+        write_feat_report(aioc, Register.CM108_IOMUX1, CM108ButtonSource.IN2)
+        print(f"Now CM108_IOMUX0: {CM108ButtonSource(read(aioc, Register.CM108_IOMUX0))}")
+        print(f"Now CM108_IOMUX1: {CM108ButtonSource(read(aioc, Register.CM108_IOMUX1))}")
+
+    if args.enable_vcos:
+        print("Enabling virtual COS...")
+        write_feat_report(aioc, Register.CM108_IOMUX0, CM108ButtonSource.IN2)
+        write_feat_report(aioc, Register.CM108_IOMUX1, CM108ButtonSource.VCOS)
+        print(f"Now CM108_IOMUX0: {CM108ButtonSource(read(aioc, Register.CM108_IOMUX0))}")
+        print(f"Now CM108_IOMUX1: {CM108ButtonSource(read(aioc, Register.CM108_IOMUX1))}")
 
     if args.store:
         print("Storing...")
