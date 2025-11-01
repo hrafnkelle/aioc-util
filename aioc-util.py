@@ -53,16 +53,24 @@ class Register(IntEnum):
     SERIAL_IOMUX1 = 0x65
     SERIAL_IOMUX2 = 0x66
     SERIAL_IOMUX3 = 0x67
+    AUDIO_RX = 0x72
+    AUDIO_TX = 0x78
     VPTT_LVLCTRL = 0x82
     VPTT_TIMCTRL = 0x84
     VCOS_LVLCTRL = 0x92
     VCOS_TIMCTRL = 0x94
+    FOXHUNT_CTRL = 0xA0
+    FOXHUNT_MSG0 = 0xA2
+    FOXHUNT_MSG1 = 0xA3
+    FOXHUNT_MSG2 = 0xA4
+    FOXHUNT_MSG3 = 0xA5
 
 
 class Command(IntFlag):
     NONE = 0x00
     WRITESTROBE = 0x01
     DEFAULTS = 0x10
+    REBOOT = 0x20
     RECALL = 0x40
     STORE = 0x80
 
@@ -89,6 +97,18 @@ class CM108ButtonSource(StrIntFlag):
     IN1 = 0x00010000
     IN2 = 0x00020000
     VCOS = 0x01000000
+
+class TXBoost(IntEnum):
+   TXBOOSTOFF = 0x00000000
+   TXBOOSTON = 0x00000100
+
+
+class RXGain(IntEnum):
+    RXGAIN1X = 0x00000000
+    RXGAIN2X = 0x00000001
+    RXGAIN4X = 0x00000002
+    RXGAIN8X = 0x00000003
+    RXGAIN16X = 0x00000004
 
 
 def read(device, address):
@@ -123,6 +143,7 @@ def parse_args():
     parser.add_argument(
         "--defaults", action="store_true", help="Load hardware defaults"
     )
+    parser.add_argument("--reboot", action="store_true", help="Reboot the device")
     parser.add_argument("--dump", action="store_true", help="Dump all known registers")
     parser.add_argument(
         "--swap-ptt", action="store_true", help="Swap PTT1/PTT2 sources"
@@ -211,6 +232,56 @@ def parse_args():
         "--enable-vcos",
         action="store_true",
         help="Enable virtual COS (default behavior)",
+    )
+    parser.add_argument(
+        "--foxhunt-volume",
+        metavar="VOLUME",
+        type=lambda x: int(x, 0),
+        help="Set foxhunt volume (0-65535)",
+    )
+    parser.add_argument(
+        "--foxhunt-wpm",
+        metavar="WPM",
+        type=lambda x: int(x, 0),
+        help="Set foxhunt words per minute (0-255)",
+    )
+    parser.add_argument(
+        "--foxhunt-interval",
+        metavar="INTERVAL",
+        type=lambda x: int(x, 0),
+        help="Set foxhunt interval in seconds (0-255)",
+    )
+    parser.add_argument(
+        "--foxhunt-get-settings",
+        action="store_true",
+        help="Read and display current foxhunt control settings",
+    )
+    parser.add_argument(
+        "--foxhunt-message",
+        metavar="MESSAGE",
+        help="Set foxhunt message (up to 16 characters, will be padded with nulls)",
+    )
+    parser.add_argument(
+        "--foxhunt-get-message",
+        action="store_true",
+        help="Read and display current foxhunt message",
+    )
+    parser.add_argument(
+        "--audio-rx-gain",
+        metavar="GAIN",
+        choices=["1x", "2x", "4x", "8x", "16x"],
+        help="Set audio RX gain: 1x, 2x, 4x, 8x, or 16x",
+    )
+    parser.add_argument(
+        "--audio-tx-boost",
+        metavar="BOOST",
+        choices=["off", "on"],
+        help="Set audio TX boost: off or on",
+    )
+    parser.add_argument(
+        "--audio-get-settings",
+        action="store_true",
+        help="Read and display current audio RX gain and TX boost settings",
     )
 
     args = parser.parse_args()
@@ -376,6 +447,142 @@ def main():
         print(f"Now CM108_IOMUX0: {CM108ButtonSource(read(aioc, Register.CM108_IOMUX0))}")
         print(f"Now CM108_IOMUX1: {CM108ButtonSource(read(aioc, Register.CM108_IOMUX1))}")
 
+    # Read and display foxhunt settings
+    if args.foxhunt_get_settings:
+        current_foxhunt = read(aioc, Register.FOXHUNT_CTRL)
+        current_volume = (current_foxhunt >> 16) & 0xFFFF
+        current_wpm = (current_foxhunt >> 8) & 0xFF
+        current_interval = (current_foxhunt >> 0) & 0xFF
+        print(f"Current foxhunt settings:")
+        print(f"  Volume: {current_volume}")
+        print(f"  WPM: {current_wpm}")
+        print(f"  Interval: {current_interval} seconds")
+        print(f"  Raw register: {current_foxhunt:08x}")
+
+    # Read and display foxhunt message
+    if args.foxhunt_get_message:
+        msg_registers = [
+            Register.FOXHUNT_MSG0,
+            Register.FOXHUNT_MSG1,
+            Register.FOXHUNT_MSG2,
+            Register.FOXHUNT_MSG3
+        ]
+        
+        # Read all 4 message registers and convert to bytes
+        message_bytes = bytearray()
+        print(f"Current foxhunt message registers:")
+        for i, reg in enumerate(msg_registers):
+            uint32_val = read(aioc, reg)
+            # Convert uint32 to 4 bytes (little-endian)
+            reg_bytes = uint32_val.to_bytes(4, byteorder='little')
+            message_bytes.extend(reg_bytes)
+            print(f"  MSG{i}: {uint32_val:08x} ('{reg_bytes.decode('ascii', errors='replace')}')")
+        
+        # Convert bytes to string, stopping at first null byte
+        try:
+            null_index = message_bytes.index(0)
+            message_str = message_bytes[:null_index].decode('ascii', errors='replace')
+        except ValueError:
+            # No null byte found, use entire 16 bytes
+            message_str = message_bytes.decode('ascii', errors='replace')
+        
+        print(f"Current foxhunt message: '{message_str}'")
+
+    # Handle foxhunt control register
+    if args.foxhunt_volume is not None or args.foxhunt_wpm is not None or args.foxhunt_interval is not None:
+        # Read current values
+        current_foxhunt = read(aioc, Register.FOXHUNT_CTRL)
+        current_volume = (current_foxhunt >> 16) & 0xFFFF
+        current_wpm = (current_foxhunt >> 8) & 0xFF
+        current_interval = (current_foxhunt >> 0) & 0xFF
+        
+        # Use new values if provided, otherwise keep current values
+        new_volume = args.foxhunt_volume if args.foxhunt_volume is not None else current_volume
+        new_wpm = args.foxhunt_wpm if args.foxhunt_wpm is not None else current_wpm
+        new_interval = args.foxhunt_interval if args.foxhunt_interval is not None else current_interval
+        
+        # Pack new values and write
+        new_foxhunt = (new_volume << 16) | (new_wpm << 8) | (new_interval << 0)
+        print(f"Setting FOXHUNT_CTRL: volume={new_volume}, wpm={new_wpm}, interval={new_interval}")
+        write_feat_report(aioc, Register.FOXHUNT_CTRL, new_foxhunt)
+        print(f"Now FOXHUNT_CTRL: {read(aioc, Register.FOXHUNT_CTRL):08x}")
+
+    # Handle foxhunt message
+    if args.foxhunt_message is not None:
+        # Convert string to bytes and pad/truncate to 16 bytes
+        message_bytes = args.foxhunt_message.encode('ascii', errors='replace')[:16]
+        message_bytes = message_bytes.ljust(16, b'\x00')  # Pad with nulls to 16 bytes
+        
+        # Convert 16 bytes to 4 uint32 values (little-endian)
+        msg_registers = [
+            Register.FOXHUNT_MSG0,
+            Register.FOXHUNT_MSG1, 
+            Register.FOXHUNT_MSG2,
+            Register.FOXHUNT_MSG3
+        ]
+        
+        print(f"Setting foxhunt message: '{args.foxhunt_message}'")
+        for i in range(4):
+            # Extract 4 bytes and convert to uint32 (little-endian)
+            byte_offset = i * 4
+            uint32_val = int.from_bytes(message_bytes[byte_offset:byte_offset+4], byteorder='little')
+            write_feat_report(aioc, msg_registers[i], uint32_val)
+            print(f"  MSG{i}: {uint32_val:08x} ('{message_bytes[byte_offset:byte_offset+4].decode('ascii', errors='replace')}')")
+
+    # Read and display audio settings
+    if args.audio_get_settings:
+        current_rx = read(aioc, Register.AUDIO_RX)
+        current_tx = read(aioc, Register.AUDIO_TX)
+        
+        # Map RX gain values back to readable names
+        rx_gain_names = {
+            RXGain.RXGAIN1X: "1x",
+            RXGain.RXGAIN2X: "2x", 
+            RXGain.RXGAIN4X: "4x",
+            RXGain.RXGAIN8X: "8x",
+            RXGain.RXGAIN16X: "16x"
+        }
+        
+        # Map TX boost values back to readable names
+        tx_boost_names = {
+            TXBoost.TXBOOSTOFF: "off",
+            TXBoost.TXBOOSTON: "on"
+        }
+        
+        rx_gain_name = rx_gain_names.get(RXGain(current_rx), f"unknown ({current_rx:08x})")
+        tx_boost_name = tx_boost_names.get(TXBoost(current_tx), f"unknown ({current_tx:08x})")
+        
+        print(f"Current audio settings:")
+        print(f"  RX Gain: {rx_gain_name}")
+        print(f"  TX Boost: {tx_boost_name}")
+        print(f"  Raw AUDIO_RX: {current_rx:08x}")
+        print(f"  Raw AUDIO_TX: {current_tx:08x}")
+
+    # Handle audio RX gain
+    if args.audio_rx_gain is not None:
+        gain_map = {
+            "1x": RXGain.RXGAIN1X,
+            "2x": RXGain.RXGAIN2X,
+            "4x": RXGain.RXGAIN4X,
+            "8x": RXGain.RXGAIN8X,
+            "16x": RXGain.RXGAIN16X
+        }
+        rxgain = gain_map[args.audio_rx_gain]
+        print(f"Setting Audio RX gain to {rxgain.name}")
+        write_feat_report(aioc, Register.AUDIO_RX, rxgain)
+        print(f"Now AUDIO_RX: {read(aioc, Register.AUDIO_RX):08x}")
+
+    # Handle audio TX boost
+    if args.audio_tx_boost is not None:
+        boost_map = {
+            "off": TXBoost.TXBOOSTOFF,
+            "on": TXBoost.TXBOOSTON
+        }
+        txboost = boost_map[args.audio_tx_boost]
+        print(f"Setting Audio TX boost to {txboost.name}")
+        write_feat_report(aioc, Register.AUDIO_TX, txboost)
+        print(f"Now AUDIO_TX: {read(aioc, Register.AUDIO_TX):08x}")
+
     if args.store:
         print("Storing...")
         cmd(aioc, Command.STORE)
@@ -385,6 +592,10 @@ def main():
 
     if args.set_ptt2_state:
         set_ptt_state_raw(aioc, PTTChannel.PTT2, args.set_ptt2_state == "on")
+
+    if args.reboot:
+        print("Rebooting device...")
+        cmd(aioc, Command.REBOOT)
 
 
 if __name__ == "__main__":
