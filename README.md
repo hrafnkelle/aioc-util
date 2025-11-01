@@ -95,7 +95,6 @@ On Windows you may need to put python in front of the script name
 python aioc-util.py --dump
 ```
 
-
 ### Finding the VID/PID
 
 If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device, you can use the following commands:
@@ -137,5 +136,41 @@ ASL3 supports the AIOC on its default USB VID PID values. You can edit the file 
 uncomment the line with the AIOC USB VID and PID values. This way you don't have to change the VID and PID so it looks like a CM108 interface. If you would rather change the VID and PID values then you can do that with
 ```bash
 ./aioc-util.py --set-usb 0x0d8c 0x000c --store
+```
+
+### Foxhunt Mode
+
+The AIOC firmware v1.4+ includes a foxhunt mode that can automatically transmit a Morse code message at regular intervals. This is useful for radio direction finding such as "fox hunt" activities. The AIOC only needs power (i.e. from a usb power bank) in this mode, no computer connection is needed.
+
+The foxhunt mode has four main parameters:
+
+- **Volume** (0-65535): Audio output level for the Morse code transmission
+- **WPM** (0-255): Words per minute for Morse code speed  
+- **Interval** (0-255): Time in seconds between transmissions (0 disables foxhunt mode)
+- **Message**: Up to 16 character text message to transmit in Morse code
+
+Check current foxhunt settings:
+```bash
+./aioc-util.py --foxhunt-get-settings --foxhunt-get-message
+```
+
+Set up a basic foxhunt beacon:
+```bash
+./aioc-util.py --foxhunt-message "DE TF0FOX" --foxhunt-wpm 20 --foxhunt-interval 60 --foxhunt-volume 32000 --store
+```
+
+Configure just the transmission speed:
+```bash
+./aioc-util.py --foxhunt-wpm 15 --store
+```
+
+Disable foxhunt mode:
+```bash
+./aioc-util.py --foxhunt-interval 0 --store
+```
+
+Set a new message without changing other settings:
+```bash
+./aioc-util.py --foxhunt-message "VVV DE F0XX" --store
 ```
 
