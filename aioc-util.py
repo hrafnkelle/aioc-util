@@ -249,7 +249,7 @@ def parse_args():
         "--foxhunt-interval",
         metavar="INTERVAL",
         type=lambda x: int(x, 0),
-        help="Set foxhunt interval in seconds (0-255)",
+        help="Set foxhunt interval in seconds (0-255, 0 disables foxhunt mode)",
     )
     parser.add_argument(
         "--foxhunt-get-settings",
