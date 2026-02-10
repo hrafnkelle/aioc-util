@@ -6,7 +6,7 @@ device, viewing its internal registers and change them, including setting the PT
 
 This utility is written by Hrafnkell Eiríksson TF3HR based on code from [G1LRO](https://g1lro.uk/?p=676) and from [Simon Küppers/skuep](https://github.com/skuep/AIOC/pull/93#issuecomment-2571321845).
 
-The code is only tested against AIOC firmware v1.3. Firmware v1.2 does not seem to work. Please [upgrade your AIOC](https://github.com/skuep/AIOC#how-to-program) if needed.
+AIOC-Util requires firmware version 1.3 or later. The code has been tested against AIOC firmware v1.3 and v1.4.1. Firmware v1.2 does not seem to work. Please [upgrade your AIOC](https://github.com/skuep/AIOC#how-to-program) if needed.
 
 
 ## Requirements
