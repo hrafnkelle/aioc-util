@@ -1,25 +1,41 @@
 #!/usr/bin/env python3
 
+################################################################################
+#
+# aioc-util.py
+#
+# A command-line tool for configuring the AIOC device, viewing its internal
+# registers and changing them, including setting the PTT source.
+#
+# Original code by hrafnkelle 25th May 2025
+# Tweaked to be multi-platform by KDMcMullan 9th Feb 2026
+#
+# Tested on Windows 10, Python 3.8.3.
+#
+################################################################################
+
 import argparse
 import os
 import sys
 from enum import IntEnum, IntFlag
 from struct import Struct
 
-# On Windows, ensure hidapi.dll is available
-if os.name == "nt":
-    import ctypes
+# NB, I don't think we need the ctypes.WinDLL(...) block. On Windows (10), pip install hidapi handles the DLL automatically.
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    dll_path = os.path.join(script_dir, "hidapi.dll")
-    try:
-        if os.path.exists(dll_path):
-            ctypes.WinDLL(dll_path)
-        else:
-            ctypes.WinDLL("hidapi.dll")
-    except OSError as e:
-        print("Could not load hidapi.dll:", e)
-        sys.exit(1)
+# On Windows, ensure hidapi.dll is available
+#if os.name == "nt":
+#    import ctypes
+
+#    script_dir = os.path.dirname(os.path.abspath(__file__))
+#    dll_path = os.path.join(script_dir, "hidapi.dll")
+#    try:
+#        if os.path.exists(dll_path):
+#            ctypes.WinDLL(dll_path)
+#        else:
+#            ctypes.WinDLL("hidapi.dll")
+#    except OSError as e:
+#        print("Could not load hidapi.dll:", e)
+#        sys.exit(1)
 
 
 import hid
@@ -111,18 +127,47 @@ class RXGain(IntEnum):
     RXGAIN16X = 0x00000004
 
 
+def open_aioc(vid=AIOC_VID, pid=AIOC_PID):
+    """
+    Open the AIOC device cross-platform.
+    """
+    if os.name == "nt":
+        # Windows
+        aioc = hid.device()
+        aioc.open(vid, pid)
+    else:
+        # Linux / others
+        aioc = hid.Device(vid, pid)
+    return aioc
+
+
 def read(device, address):
-    # Set address and read
-    request = Struct("<BBBL").pack(0, Command.NONE, address, 0x00000000)
+    """
+    Read a register from the device (cross-platform)
+    """
+    request = Struct("<BBBL").pack(0, 0x00, address, 0x00000000)  # Command.NONE = 0x00
     device.send_feature_report(request)
     data = device.get_feature_report(0, 7)
-    _, _, _, value = Struct("<BBBL").unpack(data)
+    data_bytes = bytes(data)  # <-- Windows returns list, Linux returns bytes
+    _, _, _, value = Struct("<BBBL").unpack(data_bytes)
     return value
 
 
 def write_feat_report(device, address, value):
-    data = Struct("<BBBL").pack(0, Command.WRITESTROBE, address, value)
+#    data = Struct("<BBBL").pack(0, Command.WRITESTROBE, address, value)
+    data = Struct("<BBBL").pack(0, 0x01, address, value)  # Command.WRITESTROBE = 0x01
     device.send_feature_report(data)
+
+def get_device_info(device):
+    """
+    Cross-platform manufacturer/product/serial
+    """
+    if os.name == "nt":
+        return (device.get_manufacturer_string(),
+                device.get_product_string(),
+                device.get_serial_number_string())
+    else:
+        return (device.manufacturer, device.product, device.serial)
 
 def cmd(device, cmd):
     data = Struct("<BBBL").pack(0, cmd, 0x00, 0x00000000)
@@ -322,7 +367,8 @@ def main():
     else:
         vid_open, pid_open = AIOC_VID, AIOC_PID
     try:
-        aioc = hid.Device(vid=vid_open, pid=pid_open)
+#        aioc = hid.Device(vid=vid_open, pid=pid_open)
+        aioc = open_aioc(vid_open, pid_open)
     except (OSError, hid.HIDException) as e:
         print(
             f"Could not open AIOC device (VID: {vid_open:#06x}, PID: {pid_open:#06x}):",
@@ -340,9 +386,15 @@ def main():
         cmd(aioc, Command.DEFAULTS)
 
     if args.dump:
-        print(f"Manufacturer: {aioc.manufacturer}")
-        print(f"Product: {aioc.product}")
-        print(f"Serial No: {aioc.serial}")
+
+        man, prod, serial = get_device_info(aioc)
+
+#        print(f"Manufacturer: {aioc.manufacturer}")
+        print(f"Manufacturer: {man}")
+#        print(f"Product: {aioc.product}")
+        print(f"Product: {prod}")
+#        print(f"Serial No: {aioc.serial}")
+        print(f"Serial: {serial}")
         print(f"Magic: {magic}")
 
         ptt1_source = PTTSource(read(aioc, Register.AIOC_IOMUX0))
