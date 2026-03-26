@@ -341,11 +341,7 @@ def main():
         sys.exit(0)
 
     try:
-        if args.open_serialnum:
-            aioc = hid.Device(vid=vid_open, pid=pid_open, serial=args.open_serialnum)
-        else:
-            aioc = hid.Device(vid=vid_open, pid=pid_open)
-
+        aioc = hid.Device(vid=vid_open, pid=pid_open, serial=args.open_serialnum)
     except (OSError, hid.HIDException) as e:
         print(
             f"Could not open AIOC device (VID: {vid_open:#06x}, PID: {pid_open:#06x}, Serial: {args.open_serialnum}):",
