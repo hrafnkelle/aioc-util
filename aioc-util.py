@@ -348,7 +348,7 @@ def main():
 
     except (OSError, hid.HIDException) as e:
         print(
-            f"Could not open AIOC device (VID: {vid_open:#06x}, PID: {pid_open:#06x}, Serial:{args.open_serialnum}):",
+            f"Could not open AIOC device (VID: {vid_open:#06x}, PID: {pid_open:#06x}, Serial: {args.open_serialnum}):",
             e,
         )
         sys.exit(1)
