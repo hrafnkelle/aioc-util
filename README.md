@@ -79,7 +79,7 @@ List the available command line arguments
 
 ### Example: Key radio
 
-To key a radio set ptt1 state to on, to unkey use off 
+To key a radio set ptt1 state to on, to unkey use off
 ```bash
 ./aioc-util.py --set-ptt1-state on
 ```
@@ -106,6 +106,20 @@ If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device
   Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like "USB\VID*" } | Select-Object Name, InstanceId
   ```
 
+### Working with multiple devices
+
+When working with multiple AIOC devicets attached, it is possible to list the devices visible to `aioc-util.py` and target a specific device by serial number. This option can be used in conjunction with the custom VID/PID options above.
+
+```bash
+./aioc-util.py --list-devices
+```
+
+### Example: Read a specific AIOC device by serial number
+
+```bash
+./aioc-util.py --open-serialnum 12345678 --dump
+```
+
 ## Application examples
 
 You may need to set the AIOC register values to defaults before using the suggestions below.
@@ -124,15 +138,15 @@ To use with [APRSDroid](https://aprsdroid.org/), the virtual PTT should be enabl
 
 ### AllStarLink3
 
-It is simple to set up an [AllStarLink](https://www.allstarlink.org/) node with the AIOC. 
+It is simple to set up an [AllStarLink](https://www.allstarlink.org/) node with the AIOC.
 
 Make sure you have a udev rule to allow access to the HID functionality of the AIOC like described above. Set the VCOS_TIMCTRL register to 1500
 
 ```bash
-./aioc-util.py --vcos-tmctrl 1500 --store
+./aioc-util.py --vcos-timctrl 1500 --store
 ```
 
-ASL3 supports the AIOC on its default USB VID PID values. You can edit the file `/etc/asterisk/res_usbradio.conf` and 
+ASL3 supports the AIOC on its default USB VID PID values. You can edit the file `/etc/asterisk/res_usbradio.conf` and
 uncomment the line with the AIOC USB VID and PID values. This way you don't have to change the VID and PID so it looks like a CM108 interface. If you would rather change the VID and PID values then you can do that with
 ```bash
 ./aioc-util.py --set-usb 0x0d8c 0x000c --store
@@ -145,7 +159,7 @@ The AIOC firmware v1.4+ includes a foxhunt mode that can automatically transmit 
 The foxhunt mode has four main parameters:
 
 - **Volume** (0-65535): Audio output level for the Morse code transmission
-- **WPM** (0-255): Words per minute for Morse code speed  
+- **WPM** (0-255): Words per minute for Morse code speed
 - **Interval** (0-255): Time in seconds between transmissions (0 disables foxhunt mode)
 - **Message**: Up to 16 character text message to transmit in Morse code
 
@@ -173,4 +187,3 @@ Set a new message without changing other settings:
 ```bash
 ./aioc-util.py --foxhunt-message "VVV DE F0XX" --store
 ```
-

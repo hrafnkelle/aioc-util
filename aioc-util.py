@@ -110,6 +110,10 @@ class RXGain(IntEnum):
     RXGAIN8X = 0x00000003
     RXGAIN16X = 0x00000004
 
+def list_devices(vid, pid):
+    devices = hid.enumerate(vid, pid)
+    for device in devices:
+        print(f"Serial: {device['serial_number']}, Path: {device['path']}")
 
 def read(device, address):
     # Set address and read
@@ -177,6 +181,16 @@ def parse_args():
         metavar=("VID", "PID"),
         type=lambda x: int(x, 0),
         help="USB VID and PID to use when opening the device (hex or decimal)",
+    )
+    parser.add_argument(
+        "--list-devices",
+        action="store_true",
+        help="List available AIOC devices. If --open-usb is specified, uses that VID/PID.",
+    )
+    parser.add_argument(
+        "--open-serialnum",
+        metavar="SERIALNUM",
+        help="If multiple AIOCs are present, open a specific serial number. If --open-usb is specified, uses that VID/PID.",
     )
     parser.add_argument(
         "--vol-up", metavar="SOURCE", help="Set Volume Up button source"
@@ -321,11 +335,16 @@ def main():
         vid_open, pid_open = args.open_usb
     else:
         vid_open, pid_open = AIOC_VID, AIOC_PID
+
+    if args.list_devices:
+        list_devices(vid_open, pid_open)
+        sys.exit(0)
+
     try:
-        aioc = hid.Device(vid=vid_open, pid=pid_open)
+        aioc = hid.Device(vid=vid_open, pid=pid_open, serial=args.open_serialnum)
     except (OSError, hid.HIDException) as e:
         print(
-            f"Could not open AIOC device (VID: {vid_open:#06x}, PID: {pid_open:#06x}):",
+            f"Could not open AIOC device (VID: {vid_open:#06x}, PID: {pid_open:#06x}, Serial: {args.open_serialnum}):",
             e,
         )
         sys.exit(1)
@@ -362,7 +381,6 @@ def main():
         print(f"Current CM108 Button 4 (RecMute) Source: {btn4_source}")
 
         dump(aioc)
-
 
     if args.swap_ptt:
         p1, p2 = ptt2_source, ptt1_source
@@ -467,7 +485,7 @@ def main():
             Register.FOXHUNT_MSG2,
             Register.FOXHUNT_MSG3
         ]
-        
+
         # Read all 4 message registers and convert to bytes
         message_bytes = bytearray()
         print(f"Current foxhunt message registers:")
@@ -477,7 +495,7 @@ def main():
             reg_bytes = uint32_val.to_bytes(4, byteorder='little')
             message_bytes.extend(reg_bytes)
             print(f"  MSG{i}: {uint32_val:08x} ('{reg_bytes.decode('ascii', errors='replace')}')")
-        
+
         # Convert bytes to string, stopping at first null byte
         try:
             null_index = message_bytes.index(0)
@@ -485,7 +503,7 @@ def main():
         except ValueError:
             # No null byte found, use entire 16 bytes
             message_str = message_bytes.decode('ascii', errors='replace')
-        
+
         print(f"Current foxhunt message: '{message_str}'")
 
     # Handle foxhunt control register
@@ -495,12 +513,12 @@ def main():
         current_volume = (current_foxhunt >> 16) & 0xFFFF
         current_wpm = (current_foxhunt >> 8) & 0xFF
         current_interval = (current_foxhunt >> 0) & 0xFF
-        
+
         # Use new values if provided, otherwise keep current values
         new_volume = args.foxhunt_volume if args.foxhunt_volume is not None else current_volume
         new_wpm = args.foxhunt_wpm if args.foxhunt_wpm is not None else current_wpm
         new_interval = args.foxhunt_interval if args.foxhunt_interval is not None else current_interval
-        
+
         # Pack new values and write
         new_foxhunt = (new_volume << 16) | (new_wpm << 8) | (new_interval << 0)
         print(f"Setting FOXHUNT_CTRL: volume={new_volume}, wpm={new_wpm}, interval={new_interval}")
@@ -512,15 +530,15 @@ def main():
         # Convert string to bytes and pad/truncate to 16 bytes
         message_bytes = args.foxhunt_message.encode('ascii', errors='replace')[:16]
         message_bytes = message_bytes.ljust(16, b'\x00')  # Pad with nulls to 16 bytes
-        
+
         # Convert 16 bytes to 4 uint32 values (little-endian)
         msg_registers = [
             Register.FOXHUNT_MSG0,
-            Register.FOXHUNT_MSG1, 
+            Register.FOXHUNT_MSG1,
             Register.FOXHUNT_MSG2,
             Register.FOXHUNT_MSG3
         ]
-        
+
         print(f"Setting foxhunt message: '{args.foxhunt_message}'")
         for i in range(4):
             # Extract 4 bytes and convert to uint32 (little-endian)
@@ -533,25 +551,25 @@ def main():
     if args.audio_get_settings:
         current_rx = read(aioc, Register.AUDIO_RX)
         current_tx = read(aioc, Register.AUDIO_TX)
-        
+
         # Map RX gain values back to readable names
         rx_gain_names = {
             RXGain.RXGAIN1X: "1x",
-            RXGain.RXGAIN2X: "2x", 
+            RXGain.RXGAIN2X: "2x",
             RXGain.RXGAIN4X: "4x",
             RXGain.RXGAIN8X: "8x",
             RXGain.RXGAIN16X: "16x"
         }
-        
+
         # Map TX boost values back to readable names
         tx_boost_names = {
             TXBoost.TXBOOSTOFF: "off",
             TXBoost.TXBOOSTON: "on"
         }
-        
+
         rx_gain_name = rx_gain_names.get(RXGain(current_rx), f"unknown ({current_rx:08x})")
         tx_boost_name = tx_boost_names.get(TXBoost(current_tx), f"unknown ({current_tx:08x})")
-        
+
         print(f"Current audio settings:")
         print(f"  RX Gain: {rx_gain_name}")
         print(f"  TX Boost: {tx_boost_name}")
