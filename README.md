@@ -108,7 +108,7 @@ If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device
 
 ### Working with multiple devices
 
-When using `aioc-util.py` with multiple AIOC devicets attached, it is possible to list the devices visible to AIOC-util and target a specific device.
+When working with multiple AIOC devicets attached, it is possible to list the devices visible to `aioc-util.py` and target a specific device by serial number. This option can be used in conjunction with the custom VID/PID options above.
 
 ```bash
 ./aioc-util.py --list-devices
