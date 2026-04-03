@@ -106,6 +106,20 @@ If you need to find the USB Vendor ID (VID) and Product ID (PID) for your device
   Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like "USB\VID*" } | Select-Object Name, InstanceId
   ```
 
+### Working with multiple devices
+
+When using `aioc-util.py` with multiple AIOC devicets attached, it is possible to list the devices visible to AIOC-util and target a specific device.
+
+```bash
+./aioc-util.py --list-devices
+```
+
+### Example: Read a specific AIOC device by serial number
+
+```bash
+./aioc-util.py --open-serialnum 12345678 --dump
+```
+
 ## Application examples
 
 You may need to set the AIOC register values to defaults before using the suggestions below.
