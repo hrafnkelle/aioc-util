@@ -50,7 +50,7 @@ The [libusb/hidapi](https://github.com/libusb/hidapi) project also has a udev ru
 
 If needed, install libhidapi-hidraw0 and libhidapi-libusb
 ```bash
-sudo apt install libhidapi-hidraw0 libhidapi-libusb
+sudo apt install libhidapi-hidraw0 libhidapi-libusb0
 ```
 
 ### Windows
