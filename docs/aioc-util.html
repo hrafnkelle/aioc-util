@@ -50,6 +50,24 @@
       background: #1a2036; color: var(--muted);
       border: 1px solid var(--border);
     }
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .meta a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color .2s;
+    }
+    .meta a:hover { border-color: var(--accent); }
+    @media(max-width:640px) {
+      .meta { display: none; }
+    }
     .conn-area { margin-left: auto; display: flex; align-items: center; gap: 10px; }
     .dot {
       width: 9px; height: 9px; border-radius: 50%;
@@ -235,6 +253,10 @@
 <header>
   <div class="logo">AIOC <em>Utility</em></div>
   <div class="badge">WebHID</div>
+  <div class="meta">
+    <a href="https://github.com/hrafnkelle/aioc-util" target="_blank" rel="noopener noreferrer">Source code repository</a>
+    <span>This tool was created by TF3HR</span>
+  </div>
   <div class="conn-area">
     <div class="dot" id="dot"></div>
     <span id="conn-label">Not connected</span>
