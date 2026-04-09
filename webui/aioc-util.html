@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIOC Utility</title>
+    <link rel="stylesheet" href="./aioc-util.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ HEADER -->
+<header>
+  <div class="logo">AIOC <em>Utility</em></div>
+  <div class="badge">WebHID</div>
+  <div class="meta">
+    <a href="https://github.com/hrafnkelle/aioc-util" target="_blank" rel="noopener noreferrer">Source code repository</a>
+    <span>This tool was created by TF3HR</span>
+  </div>
+  <div class="conn-area">
+    <div class="dot" id="dot"></div>
+    <span id="conn-label">Not connected</span>
+    <button class="btn btn-primary" id="btn-connect">Connect</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════ MAIN -->
+<main>
+
+  <!-- CONNECT PROMPT (shown when no device) -->
+  <div id="connect-prompt">
+    <strong style="font-size:16px">No AIOC device connected</strong>
+    <p>Click <strong>Connect</strong> in the header to open the device picker.</p>
+    <div class="hint">Requires a browser with WebHID support (Chrome / Edge 89+) over HTTPS or localhost</div>
+  </div>
+
+  <!-- ── DEVICE INFO ── -->
+  <div class="card needs-device" id="card-info">
+    <div class="card-head">
+      <h2>Device Info</h2>
+      <div class="acts">
+        <button class="btn btn-ghost btn-sm" id="btn-read-all">↺ Read All</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-kv"><span class="k">Product</span><span class="v" id="i-prod">—</span></div>
+        <div class="info-kv"><span class="k">Magic</span><span class="v" id="i-magic">—</span></div>
+        <div class="info-kv"><span class="k">VID:PID</span><span class="v" id="i-vidpid">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PTT SOURCES ── -->
+  <div class="card needs-device" id="card-ptt">
+    <div class="card-head">
+      <h2>PTT Sources</h2>
+      <div class="acts">
+        <button class="btn btn-ghost btn-sm" id="btn-ptt-read">Read</button>
+        <button class="btn btn-primary btn-sm" id="btn-ptt-write">Apply</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <p class="sub">PTT1 Source</p>
+      <div class="flags" id="ptt1-flags"></div>
+      <p class="sub">PTT2 Source</p>
+      <div class="flags" id="ptt2-flags"></div>
+      <hr class="divider">
+      <div class="action-grid">
+        <button class="btn btn-ghost btn-sm" id="btn-swap-ptt">⇄ Swap PTT1/PTT2</button>
+        <button class="btn btn-ghost btn-sm" id="btn-auto-ptt1">Auto PTT1 (VPTT)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CM108 BUTTON SOURCES ── -->
+  <div class="card needs-device" id="card-btn">
+    <div class="card-head">
+      <h2>CM108 Button Sources</h2>
+      <div class="acts">
+        <button class="btn btn-ghost btn-sm" id="btn-btn-read">Read</button>
+        <button class="btn btn-primary btn-sm" id="btn-btn-write">Apply</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div>
+          <p class="sub">Button 1 – Vol Up</p>
+          <div class="flags" id="cm108-btn1-flags"></div>
+        </div>
+        <div>
+          <p class="sub">Button 2 – Vol Down</p>
+          <div class="flags" id="cm108-btn2-flags"></div>
+        </div>
+        <div>
+          <p class="sub">Button 3 – Playback Mute</p>
+          <div class="flags" id="cm108-btn3-flags"></div>
+        </div>
+        <div>
+          <p class="sub">Button 4 – Record Mute</p>
+          <div class="flags" id="cm108-btn4-flags"></div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="action-grid">
+        <button class="btn btn-ghost btn-sm" id="btn-enable-vcos">Enable Virtual COS (default)</button>
+        <button class="btn btn-ghost btn-sm" id="btn-enable-hwcos">Enable Hardware COS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AUDIO ── -->
+  <div class="card needs-device" id="card-audio">
+    <div class="card-head">
+      <h2>Audio Settings</h2>
+      <div class="acts">
+        <button class="btn btn-ghost btn-sm" id="btn-audio-read">Read</button>
+        <button class="btn btn-primary btn-sm" id="btn-audio-write">Apply</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div class="field">
+          <label>RX Gain</label>
+          <select id="sel-rxgain">
+            <option value="0">1×</option>
+            <option value="1">2×</option>
+            <option value="2">4×</option>
+            <option value="3">8×</option>
+            <option value="4">16×</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>TX Boost</label>
+          <select id="sel-txboost">
+            <option value="0">Off</option>
+            <option value="256">On</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AUTOPTT / VCOS ── -->
+  <div class="card needs-device" id="card-avcos">
+    <div class="card-head">
+      <h2>AutoPTT &amp; VCOS Thresholds</h2>
+      <div class="acts">
+        <button class="btn btn-ghost btn-sm" id="btn-avcos-read">Read</button>
+        <button class="btn btn-primary btn-sm" id="btn-avcos-write">Apply</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div>
+          <p class="sub">VPTT (AutoPTT)</p>
+          <div class="grid-2" style="margin-top:4px">
+            <div class="field">
+              <label>Level Control (decimal or 0x…)</label>
+              <input type="text" id="vptt-lvl" placeholder="0">
+            </div>
+            <div class="field">
+              <label>Timing Control (decimal or 0x…)</label>
+              <input type="text" id="vptt-tim" placeholder="0">
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="sub">VCOS (COS detection)</p>
+          <div class="grid-2" style="margin-top:4px">
+            <div class="field">
+              <label>Level Control (decimal or 0x…)</label>
+              <input type="text" id="vcos-lvl" placeholder="0">
+            </div>
+            <div class="field">
+              <label>Timing Control (decimal or 0x…)</label>
+              <input type="text" id="vcos-tim" placeholder="0">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FOXHUNT ── -->
+  <div class="card needs-device" id="card-fox">
+    <div class="card-head">
+      <h2>Foxhunt (CW Beacon)</h2>
+      <div class="acts">
+        <button class="btn btn-ghost btn-sm" id="btn-fox-read">Read</button>
+        <button class="btn btn-primary btn-sm" id="btn-fox-write">Apply</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="grid-3">
+        <div class="field">
+          <label>Volume (0–65535)</label>
+          <input type="number" id="fox-vol" min="0" max="65535" placeholder="0">
+        </div>
+        <div class="field">
+          <label>Speed WPM (0–255)</label>
+          <input type="number" id="fox-wpm" min="0" max="255" placeholder="20">
+        </div>
+        <div class="field">
+          <label>Interval seconds (0=off)</label>
+          <input type="number" id="fox-interval" min="0" max="255" placeholder="0">
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Message (max 16 characters)</label>
+        <input type="text" id="fox-msg" maxlength="16" placeholder="DE CALLSIGN">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PTT STATE ── -->
+  <div class="card needs-device" id="card-pttstate">
+    <div class="card-head"><h2>Manual PTT State</h2></div>
+    <div class="card-body">
+      <div class="ptt-tog-row">
+        <div class="ptt-tog">
+          <span class="name">PTT 1</span>
+          <div class="ptt-tog-btns">
+            <button class="btn btn-success btn-sm" id="btn-ptt1-on">ON</button>
+            <button class="btn btn-danger btn-sm"  id="btn-ptt1-off">OFF</button>
+          </div>
+        </div>
+        <div class="ptt-tog">
+          <span class="name">PTT 2</span>
+          <div class="ptt-tog-btns">
+            <button class="btn btn-success btn-sm" id="btn-ptt2-on">ON</button>
+            <button class="btn btn-danger btn-sm"  id="btn-ptt2-off">OFF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── USB ID ── -->
+  <div class="card needs-device" id="card-usb">
+    <div class="card-head">
+      <h2>USB VID / PID Override</h2>
+      <div class="acts">
+        <button class="btn btn-warning btn-sm" id="btn-usb-write">Apply (caution)</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div class="field">
+          <label>Vendor ID (hex, e.g. 0x1209)</label>
+          <input type="text" id="usb-vid" placeholder="0x1209">
+        </div>
+        <div class="field">
+          <label>Product ID (hex, e.g. 0x7388)</label>
+          <input type="text" id="usb-pid" placeholder="0x7388">
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-top:10px">
+        ⚠ Changing USB VID/PID takes effect after a reboot. Store first, then reboot.
+        If you set a wrong value, you may need to use another tool (or re-flash) to recover.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── ACTIONS ── -->
+  <div class="card needs-device" id="card-actions">
+    <div class="card-head"><h2>Device Actions</h2></div>
+    <div class="card-body">
+      <div class="action-grid">
+        <button class="btn btn-success" id="btn-store">💾 Store to Flash</button>
+        <button class="btn btn-ghost"   id="btn-recall">↺ Recall from Flash</button>
+        <button class="btn btn-warning" id="btn-defaults">⚙ Load Defaults</button>
+        <button class="btn btn-danger"  id="btn-reboot">⟳ Reboot Device</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RAW REGISTER DUMP ── -->
+  <div class="card needs-device" id="card-dump">
+    <div class="card-head">
+      <h2>Raw Register Dump</h2>
+      <div class="acts">
+        <button class="btn btn-ghost btn-sm" id="btn-dump">Read Registers</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <table class="reg-table">
+        <thead><tr><th>Register</th><th>Address</th><th>Value</th></tr></thead>
+        <tbody id="reg-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════ LOG -->
+<div id="log-panel">
+  <div id="log-head">
+    Log
+    <button class="btn btn-ghost btn-sm" id="btn-clrlog" style="margin-left:auto">Clear</button>
+  </div>
+  <div id="log-scrl"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ SCRIPT -->
+<script src="./aioc-util.js"></script>
+
+</body>
+</html>
