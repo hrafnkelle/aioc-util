@@ -3,7 +3,7 @@ name: Deploy GitHub Pages
 on:
   push:
     branches:
-      - feature/webui
+      - main
     paths:
       - webui/**
       - .github/workflows/pages.yml
