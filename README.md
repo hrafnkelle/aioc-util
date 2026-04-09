@@ -3,6 +3,9 @@
 `aioc-util.py` is a command-line tool for configuring the [AIOC](https://github.com/skuep/AIOC)
 device, viewing its internal registers and change them, including setting the PTT source.
 
+A web based version of the tool that runs completely in the browser is available at https://aioc-util.tf3hr.net/
+It only works in Chrome based browsers and not in mobile versions.
+
 
 This utility is written by Hrafnkell Eiríksson TF3HR based on code from [G1LRO](https://g1lro.uk/?p=676) and from [Simon Küppers/skuep](https://github.com/skuep/AIOC/pull/93#issuecomment-2571321845).
 

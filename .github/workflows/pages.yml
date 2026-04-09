@@ -5,7 +5,7 @@ on:
     branches:
       - feature/webui
     paths:
-      - docs/aioc-util.html
+      - webui/**
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -36,7 +36,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p site
-          cp docs/aioc-util.html site/index.html
+          cp -r webui/. site/
+          mv site/aioc-util.html site/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
