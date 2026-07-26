@@ -1,9 +1,6 @@
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const AIOC_VID = 0x1209;
-const AIOC_PID = 0x7388;
-
 // Known VID/PID pairs the AIOC may present as (device is always verified by magic register)
 const KNOWN_HID_FILTERS = [
   { vendorId: 0x1209, productId: 0x7388 },  // default AIOC
@@ -228,12 +225,9 @@ function updateGpioDisplay() {
 }
 
 function updateGpioSourceLabels(b1, b2, b3, b4) {
-  const srcName = v => {
-    if (v & 0x01000000) return 'VCOS';
-    if (v & 0x00020000) return 'IN2';
-    if (v & 0x00010000) return 'IN1';
-    return 'NONE';
-  };
+  // Priority order (highest first) matches the previous hardcoded checks: VCOS, IN2, IN1.
+  const srcPriority = [...CM108SrcBits].reverse();
+  const srcName = v => (srcPriority.find(b => v & b.value) || {}).name || 'NONE';
   [b1, b2, b3, b4].forEach((v, i) => {
     document.getElementById(`gpio-btn${i + 1}-src`).textContent = srcName(v);
   });
