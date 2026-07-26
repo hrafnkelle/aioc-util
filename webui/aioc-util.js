@@ -768,6 +768,29 @@ document.getElementById('btn-clrlog').addEventListener('click', () => {
   document.getElementById('log-scrl').innerHTML = '';
 });
 
+// ── Theme toggle ───────────────────────────────────────────────────────────
+// Dark is the default look; light is an opt-in override, matching pre-toggle behavior.
+function applyTheme(theme) {
+  const root = document.documentElement;
+  const btn = document.getElementById('btn-theme');
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+    btn.title = 'Switch to dark theme';
+    btn.setAttribute('aria-label', 'Switch to dark theme');
+  } else {
+    root.setAttribute('data-theme', 'dark');
+    btn.title = 'Switch to light theme';
+    btn.setAttribute('aria-label', 'Switch to light theme');
+  }
+}
+applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
+document.getElementById('btn-theme').addEventListener('click', () => {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const next = isLight ? 'dark' : 'light';
+  applyTheme(next);
+  try { localStorage.setItem('aioc-theme', next); } catch (e) {}
+});
+
 // ── Initial state ──────────────────────────────────────────────────────────
 setConnected(false);
 log('AIOC Utility ready. Click Connect to open the device.');
