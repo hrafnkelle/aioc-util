@@ -1,10 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AIOC Utility</title>
     <link rel="stylesheet" href="./aioc-util.css">
+    <script>
+      // Applied before first paint to avoid a light/dark flash on load.
+      try {
+        if (localStorage.getItem('aioc-theme') === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      } catch (e) {}
+    </script>
 </head>
 <body>
 
@@ -17,6 +25,10 @@
     <span>This tool was created by TF3HR</span>
   </div>
   <div class="conn-area">
+    <button class="btn-icon" id="btn-theme" type="button" title="Switch to light theme" aria-label="Switch to light theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
     <div class="dot" id="dot"></div>
     <span id="conn-label">Not connected</span>
     <button class="btn btn-primary" id="btn-connect">Connect</button>
@@ -31,6 +43,20 @@
     <strong style="font-size:16px">No AIOC device connected</strong>
     <p>Click <strong>Connect</strong> in the header to open the device picker.</p>
     <div class="hint">Requires a browser with WebHID support (Chrome / Edge 89+) over HTTPS or localhost</div>
+    <details style="margin-top:14px; text-align:left; max-width:360px; margin-left:auto; margin-right:auto">
+      <summary style="font-size:12px; color:var(--muted); cursor:pointer">Custom VID / PID (if you changed the USB IDs)</summary>
+      <div class="grid-2" style="margin-top:10px">
+        <div class="field">
+          <label>Vendor ID (hex)</label>
+          <input type="text" id="custom-vid" placeholder="e.g. 0x0d8c">
+        </div>
+        <div class="field">
+          <label>Product ID (hex)</label>
+          <input type="text" id="custom-pid" placeholder="e.g. 0x000c">
+        </div>
+      </div>
+      <p style="font-size:11px; color:var(--muted); margin-top:8px">Leave blank to search for all known AIOC VID/PID pairs. The device is verified by its internal magic register regardless of USB IDs.</p>
+    </details>
   </div>
 
   <!-- ── DEVICE INFO ── -->
@@ -46,6 +72,75 @@
         <div class="info-kv"><span class="k">Product</span><span class="v" id="i-prod">—</span></div>
         <div class="info-kv"><span class="k">Magic</span><span class="v" id="i-magic">—</span></div>
         <div class="info-kv"><span class="k">VID:PID</span><span class="v" id="i-vidpid">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GPIO STATUS ── -->
+  <div class="card needs-device" id="card-gpio">
+    <div class="card-head">
+      <h2>GPIO Status</h2>
+      <div class="acts" style="gap:6px; align-items:center">
+        <span class="gpio-live-dot" id="gpio-live-dot"></span>
+        <span style="font-size:11px; color:var(--muted)" id="gpio-live-label">Waiting for report…</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="gpio-grid">
+        <div class="gpio-pin" id="gpio-ptt1">
+          <div class="gpio-led off"></div>
+          <span class="gpio-label">PTT1</span>
+          <span class="gpio-type">OUT</span>
+        </div>
+        <div class="gpio-pin" id="gpio-ptt2">
+          <div class="gpio-led off"></div>
+          <span class="gpio-label">PTT2</span>
+          <span class="gpio-type">OUT</span>
+        </div>
+        <div class="gpio-pin" id="gpio-btn1">
+          <div class="gpio-led off"></div>
+          <span class="gpio-label">Vol+</span>
+          <span class="gpio-type gpio-src" id="gpio-btn1-src">—</span>
+        </div>
+        <div class="gpio-pin" id="gpio-btn2">
+          <div class="gpio-led off"></div>
+          <span class="gpio-label">Vol−</span>
+          <span class="gpio-type gpio-src" id="gpio-btn2-src">—</span>
+        </div>
+        <div class="gpio-pin" id="gpio-btn3">
+          <div class="gpio-led off"></div>
+          <span class="gpio-label">PlayMute</span>
+          <span class="gpio-type gpio-src" id="gpio-btn3-src">—</span>
+        </div>
+        <div class="gpio-pin" id="gpio-btn4">
+          <div class="gpio-led off"></div>
+          <span class="gpio-label">RecMute</span>
+          <span class="gpio-type gpio-src" id="gpio-btn4-src">—</span>
+        </div>
+      </div>
+      <p class="gpio-note">PTT outputs reflect button-press state. CM108 button inputs update live from device HID reports — labels show configured source from IOMUX registers.</p>
+    </div>
+  </div>
+
+  <!-- ── PTT STATE ── -->
+  <div class="card needs-device" id="card-pttstate">
+    <div class="card-head"><h2>Manual PTT State</h2></div>
+    <div class="card-body">
+      <div class="ptt-tog-row">
+        <div class="ptt-tog">
+          <span class="name">PTT 1</span>
+          <div class="ptt-tog-btns">
+            <button class="btn btn-success btn-sm" id="btn-ptt1-on">ON</button>
+            <button class="btn btn-danger btn-sm"  id="btn-ptt1-off">OFF</button>
+          </div>
+        </div>
+        <div class="ptt-tog">
+          <span class="name">PTT 2</span>
+          <div class="ptt-tog-btns">
+            <button class="btn btn-success btn-sm" id="btn-ptt2-on">ON</button>
+            <button class="btn btn-danger btn-sm"  id="btn-ptt2-off">OFF</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -208,29 +303,6 @@
       <div class="field" style="margin-top:12px">
         <label>Message (max 16 characters)</label>
         <input type="text" id="fox-msg" maxlength="16" placeholder="DE CALLSIGN">
-      </div>
-    </div>
-  </div>
-
-  <!-- ── PTT STATE ── -->
-  <div class="card needs-device" id="card-pttstate">
-    <div class="card-head"><h2>Manual PTT State</h2></div>
-    <div class="card-body">
-      <div class="ptt-tog-row">
-        <div class="ptt-tog">
-          <span class="name">PTT 1</span>
-          <div class="ptt-tog-btns">
-            <button class="btn btn-success btn-sm" id="btn-ptt1-on">ON</button>
-            <button class="btn btn-danger btn-sm"  id="btn-ptt1-off">OFF</button>
-          </div>
-        </div>
-        <div class="ptt-tog">
-          <span class="name">PTT 2</span>
-          <div class="ptt-tog-btns">
-            <button class="btn btn-success btn-sm" id="btn-ptt2-on">ON</button>
-            <button class="btn btn-danger btn-sm"  id="btn-ptt2-off">OFF</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>

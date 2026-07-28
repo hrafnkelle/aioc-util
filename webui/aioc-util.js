@@ -1,8 +1,11 @@
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const AIOC_VID = 0x1209;
-const AIOC_PID = 0x7388;
+// Known VID/PID pairs the AIOC may present as (device is always verified by magic register)
+const KNOWN_HID_FILTERS = [
+  { vendorId: 0x1209, productId: 0x7388 },  // default AIOC
+  { vendorId: 0x0d8c, productId: 0x000c },  // CM108 (common AllStarLink / ASL3 config)
+];
 
 const Reg = {
   MAGIC:        0x00,
@@ -63,6 +66,11 @@ const PTTChannel = { PTT1: 3, PTT2: 4 };
 
 // ── State ──────────────────────────────────────────────────────────────────
 let device = null;
+
+// GPIO live state
+const gpioState = { ptt1: false, ptt2: false, btn: [false, false, false, false] };
+let gpioReportCount = 0;
+let gpioIdleTimer = null;
 
 // ── Logging ────────────────────────────────────────────────────────────────
 function log(msg, level = 'info') {
@@ -125,8 +133,10 @@ async function sendCmd(cmd) {
 async function setPTTState(pinNum, on) {
   const iomask = 1 << (pinNum - 1);
   const iodata = (on ? 1 : 0) << (pinNum - 1);
-  // sendReport(reportId=0, data) — data does NOT include reportId
   await device.sendReport(0, new Uint8Array([0, iodata, iomask, 0]));
+  if (pinNum === PTTChannel.PTT1) gpioState.ptt1 = on;
+  if (pinNum === PTTChannel.PTT2) gpioState.ptt2 = on;
+  updateGpioDisplay();
 }
 
 // ── UI helpers ─────────────────────────────────────────────────────────────
@@ -198,6 +208,71 @@ function cm108SrcName(val) {
   return parts.length ? parts.join(' | ') : 'NONE';
 }
 
+// ── GPIO Status helpers ────────────────────────────────────────────────────
+function setGpioLed(pinId, on) {
+  const pin = document.getElementById(pinId);
+  if (!pin) return;
+  const led = pin.querySelector('.gpio-led');
+  led.classList.toggle('on',  on);
+  led.classList.toggle('off', !on);
+  pin.classList.toggle('active-high', on);
+}
+
+function updateGpioDisplay() {
+  setGpioLed('gpio-ptt1', gpioState.ptt1);
+  setGpioLed('gpio-ptt2', gpioState.ptt2);
+  gpioState.btn.forEach((on, i) => setGpioLed(`gpio-btn${i + 1}`, on));
+}
+
+function updateGpioSourceLabels(b1, b2, b3, b4) {
+  // Priority order (highest first) matches the previous hardcoded checks: VCOS, IN2, IN1.
+  const srcPriority = [...CM108SrcBits].reverse();
+  const srcName = v => (srcPriority.find(b => v & b.value) || {}).name || 'NONE';
+  [b1, b2, b3, b4].forEach((v, i) => {
+    document.getElementById(`gpio-btn${i + 1}-src`).textContent = srcName(v);
+  });
+}
+
+function setGpioLiveIndicator(active, label) {
+  document.getElementById('gpio-live-dot').classList.toggle('active', active);
+  document.getElementById('gpio-live-label').textContent = label;
+}
+
+function resetGpioState() {
+  gpioState.ptt1 = false;
+  gpioState.ptt2 = false;
+  gpioState.btn  = [false, false, false, false];
+  gpioReportCount = 0;
+  clearTimeout(gpioIdleTimer);
+  updateGpioDisplay();
+  ['gpio-btn1-src','gpio-btn2-src','gpio-btn3-src','gpio-btn4-src']
+    .forEach(id => { document.getElementById(id).textContent = '—'; });
+  setGpioLiveIndicator(false, 'Waiting for report…');
+}
+
+function handleInputReport(event) {
+  const { data } = event;
+  if (data.byteLength < 1) return;
+
+  if (gpioReportCount === 0) {
+    const hex = Array.from(new Uint8Array(data.buffer)).map(b => b.toString(16).padStart(2,'0')).join(' ');
+    log(`First GPIO HID input report (${data.byteLength}B): ${hex}`);
+  }
+
+  // CM108 button bitmap: bits 0-3 = buttons 1-4 (Vol+, Vol-, PlayMute, RecMute)
+  const byte0 = data.getUint8(0);
+  gpioState.btn[0] = !!(byte0 & 0x01);
+  gpioState.btn[1] = !!(byte0 & 0x02);
+  gpioState.btn[2] = !!(byte0 & 0x04);
+  gpioState.btn[3] = !!(byte0 & 0x08);
+  gpioReportCount++;
+  updateGpioDisplay();
+
+  setGpioLiveIndicator(true, 'Live');
+  clearTimeout(gpioIdleTimer);
+  gpioIdleTimer = setTimeout(() => setGpioLiveIndicator(false, 'Idle'), 3000);
+}
+
 // ── Build flag groups ──────────────────────────────────────────────────────
 buildFlagGroup('ptt1-flags',       PTTSourceBits);
 buildFlagGroup('ptt2-flags',       PTTSourceBits);
@@ -213,9 +288,16 @@ async function connect() {
     return;
   }
   try {
-    const devices = await navigator.hid.requestDevice({
-      filters: [{ vendorId: AIOC_VID, productId: AIOC_PID }]
-    });
+    // Build filter list: all known VID/PID pairs + any custom pair entered by the user
+    const filters = [...KNOWN_HID_FILTERS];
+    const customVid = parseHex(document.getElementById('custom-vid')?.value ?? '');
+    const customPid = parseHex(document.getElementById('custom-pid')?.value ?? '');
+    if (customVid && customPid) {
+      filters.push({ vendorId: customVid, productId: customPid });
+      log(`Adding custom filter: ${customVid.toString(16).padStart(4,'0')}:${customPid.toString(16).padStart(4,'0')}`);
+    }
+
+    const devices = await navigator.hid.requestDevice({ filters });
     if (!devices.length) { log('No device selected.'); return; }
 
     // Try each returned collection, verify magic
@@ -233,6 +315,8 @@ async function connect() {
           continue;
         }
         device = d;
+        device.addEventListener('inputreport', handleInputReport);
+        resetGpioState();
         logOk(`Connected: ${d.productName || 'AIOC'} (magic OK: "${text}")`);
         setConnected(true);
         populateDeviceInfo();
@@ -262,10 +346,12 @@ async function readRegWithDevice(d, addr) {
 
 async function disconnect() {
   if (device) {
+    device.removeEventListener('inputreport', handleInputReport);
     try { await device.close(); } catch(_) {}
     device = null;
     log('Disconnected.');
     setConnected(false);
+    resetGpioState();
   }
 }
 
@@ -303,6 +389,7 @@ async function readAll() {
     setFlagGroup('cm108-btn2-flags', b2);
     setFlagGroup('cm108-btn3-flags', b3);
     setFlagGroup('cm108-btn4-flags', b4);
+    updateGpioSourceLabels(b1, b2, b3, b4);
     log(`  Vol↑: ${cm108SrcName(b1)}  Vol↓: ${cm108SrcName(b2)}`);
 
     // Audio
@@ -416,10 +503,15 @@ async function writeButtons() {
 async function readButtons() {
   if (!device) return;
   try {
-    setFlagGroup('cm108-btn1-flags', await regRead(Reg.CM108_IOMUX0));
-    setFlagGroup('cm108-btn2-flags', await regRead(Reg.CM108_IOMUX1));
-    setFlagGroup('cm108-btn3-flags', await regRead(Reg.CM108_IOMUX2));
-    setFlagGroup('cm108-btn4-flags', await regRead(Reg.CM108_IOMUX3));
+    const b1 = await regRead(Reg.CM108_IOMUX0);
+    const b2 = await regRead(Reg.CM108_IOMUX1);
+    const b3 = await regRead(Reg.CM108_IOMUX2);
+    const b4 = await regRead(Reg.CM108_IOMUX3);
+    setFlagGroup('cm108-btn1-flags', b1);
+    setFlagGroup('cm108-btn2-flags', b2);
+    setFlagGroup('cm108-btn3-flags', b3);
+    setFlagGroup('cm108-btn4-flags', b4);
+    updateGpioSourceLabels(b1, b2, b3, b4);
     logOk('Button sources read.');
   } catch(e) { logErr(e.message); }
 }
@@ -608,9 +700,11 @@ window.addEventListener('beforeunload', () => {
 if (navigator.hid) {
   navigator.hid.addEventListener('disconnect', ({ device: d }) => {
     if (device && d === device) {
+      device.removeEventListener('inputreport', handleInputReport);
       device = null;
       log('Device disconnected.', 'warn');
       setConnected(false);
+      resetGpioState();
     }
   });
 }
@@ -672,6 +766,29 @@ document.getElementById('btn-reboot').addEventListener('click',   () => {
 // Log clear
 document.getElementById('btn-clrlog').addEventListener('click', () => {
   document.getElementById('log-scrl').innerHTML = '';
+});
+
+// ── Theme toggle ───────────────────────────────────────────────────────────
+// Dark is the default look; light is an opt-in override, matching pre-toggle behavior.
+function applyTheme(theme) {
+  const root = document.documentElement;
+  const btn = document.getElementById('btn-theme');
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+    btn.title = 'Switch to dark theme';
+    btn.setAttribute('aria-label', 'Switch to dark theme');
+  } else {
+    root.setAttribute('data-theme', 'dark');
+    btn.title = 'Switch to light theme';
+    btn.setAttribute('aria-label', 'Switch to light theme');
+  }
+}
+applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
+document.getElementById('btn-theme').addEventListener('click', () => {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const next = isLight ? 'dark' : 'light';
+  applyTheme(next);
+  try { localStorage.setItem('aioc-theme', next); } catch (e) {}
 });
 
 // ── Initial state ──────────────────────────────────────────────────────────

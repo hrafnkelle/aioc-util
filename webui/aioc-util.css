@@ -12,8 +12,26 @@
       --red:         #e05252;
       --orange:      #e09030;
       --input-bg:    #131620;
+      --badge-bg:    #1a2036;
+      --chip-checked-bg: #192040;
       --header-h:    56px;
       --log-h:       170px;
+    }
+
+    :root[data-theme="light"] {
+      --bg:          #eef1f8;
+      --surface:     #ffffff;
+      --card:        #ffffff;
+      --border:      #cfd5e8;
+      --text:        #1e2540;
+      --muted:       #6878a0;
+      --accent:      #1d5fc8;
+      --green:       #1a8c4e;
+      --red:         #c0351d;
+      --orange:      #b06a00;
+      --input-bg:    #f3f5fc;
+      --badge-bg:    #e6eaf8;
+      --chip-checked-bg: #dde8ff;
     }
 
     body {
@@ -23,6 +41,7 @@
       font-size: 14px;
       line-height: 1.5;
       padding-bottom: calc(var(--log-h) + 10px);
+      transition: background .2s, color .2s;
     }
 
     /* ── HEADER ────────────────────────────────────────── */
@@ -40,7 +59,7 @@
       font-size: 10px; font-weight: 700;
       letter-spacing: .8px; text-transform: uppercase;
       padding: 2px 7px; border-radius: 20px;
-      background: #1a2036; color: var(--muted);
+      background: var(--badge-bg); color: var(--muted);
       border: 1px solid var(--border);
     }
     .meta {
@@ -62,6 +81,18 @@
       .meta { display: none; }
     }
     .conn-area { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .btn-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; padding: 0;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 6px; color: var(--muted); cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .btn-icon:hover { color: var(--accent); border-color: var(--accent); }
+    .btn-icon svg { width: 16px; height: 16px; }
+    .btn-icon .icon-sun { display: none; }
+    :root[data-theme="light"] .btn-icon .icon-moon { display: none; }
+    :root[data-theme="light"] .btn-icon .icon-sun  { display: block; }
     .dot {
       width: 9px; height: 9px; border-radius: 50%;
       background: var(--muted); transition: background .3s, box-shadow .3s;
@@ -151,7 +182,7 @@
     .flag-chip:hover { border-color: var(--accent); }
     .flag-chip input { accent-color: var(--accent); cursor: pointer; }
     .flag-chip span  { font-size: 12px; font-family: monospace; }
-    .flag-chip.checked { border-color: var(--accent); background: #192040; }
+    .flag-chip.checked { border-color: var(--accent); background: var(--chip-checked-bg); }
 
     /* ── SECTION SUB-LABEL ─────────────────────────────── */
     .sub { font-size: 11px; font-weight: 700; text-transform: uppercase;
@@ -168,9 +199,9 @@
     .reg-table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 12px; }
     .reg-table th { text-align: left; padding: 4px 10px; color: var(--muted);
                     border-bottom: 1px solid var(--border); font-size: 11px; }
-    .reg-table td { padding: 4px 10px; border-bottom: 1px solid #1e2230; }
+    .reg-table td { padding: 4px 10px; border-bottom: 1px solid var(--border); }
     .reg-table tr:last-child td { border-bottom: none; }
-    .reg-table tr:hover td { background: #1a1e2a; }
+    .reg-table tr:hover td { background: var(--input-bg); }
 
     /* ── PTT STATE TOGGLES ─────────────────────────────── */
     .ptt-tog-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -225,7 +256,7 @@
     #connect-prompt p { margin-top: 8px; font-size: 13px; }
     #connect-prompt .hint {
       display: inline-block; margin-top: 14px;
-      font-size: 11px; background: #1a2036;
+      font-size: 11px; background: var(--input-bg);
       border: 1px solid var(--border); border-radius: 4px;
       padding: 6px 12px; color: var(--muted);
     }
@@ -238,3 +269,40 @@
       content: '▶'; font-size: 10px; transition: transform .2s;
     }
     details[open] > summary::before { transform: rotate(90deg); }
+
+    /* ── GPIO STATUS ─────────────────────────────────── */
+    .gpio-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+      gap: 8px;
+    }
+    .gpio-pin {
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      padding: 12px 6px;
+      background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 6px; text-align: center;
+    }
+    .gpio-led {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--border);
+      transition: background .15s, box-shadow .15s;
+    }
+    .gpio-led.on  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .gpio-led.off { background: var(--border); }
+    .gpio-pin.active-high { border-color: var(--green); }
+    .gpio-label { font-size: 11px; font-weight: 700; font-family: monospace; color: var(--text); }
+    .gpio-type  { font-size: 10px; color: var(--muted); letter-spacing: .2px; }
+    .gpio-live-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); display: inline-block;
+      transition: background .3s, box-shadow .3s;
+    }
+    .gpio-live-dot.active {
+      background: var(--green); box-shadow: 0 0 5px var(--green);
+      animation: gpio-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes gpio-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .35; }
+    }
+    .gpio-note { font-size: 11px; color: var(--muted); margin-top: 12px; }
