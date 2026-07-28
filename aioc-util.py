@@ -383,7 +383,9 @@ def main():
         dump(aioc)
 
     if args.swap_ptt:
-        p1, p2 = ptt2_source, ptt1_source
+        cur_ptt1_source = PTTSource(read(aioc, Register.AIOC_IOMUX0))
+        cur_ptt2_source = PTTSource(read(aioc, Register.AIOC_IOMUX1))
+        p1, p2 = cur_ptt2_source, cur_ptt1_source
         print(f"Setting PTT1 Source to {p1}")
         write_feat_report(aioc, Register.AIOC_IOMUX0, p1)
         print(f"Setting PTT2 Source to {p2}")
